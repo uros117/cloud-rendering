@@ -3,11 +3,9 @@ Shader "Custom/CloudShaderV4"
     Properties
     {
         _NoiseTexture3D ("3D Noise Texture", 3D) = "" {}
-        _NoiseTexture2D ("2D Noise Texture", 2D) = "" {}
         _NoiseAmplitude ("Noise Amplitude", Range(0, 1)) = 1 
         _NoiseScale ("Noise Scale", Range(0, 1)) = 1
         _Noise2DScale ("Noise 2D Scale", Range(0, 1)) = 1
-        // Two-lobe Henyey-Greenstein phase function parameters
         _HGG0 ("Forward Scattering G", Range(0, 1)) = 0.8
         _HGG1 ("Backward Scattering G", Range(-1, 0)) = -0.5
         _HGLerp ("Phase Function Blend", Range(0, 1)) = 0.5
@@ -45,7 +43,6 @@ Shader "Custom/CloudShaderV4"
 
             float _NoiseAmplitude;
             float _NoiseScale;
-            float _Noise2DScale;
             float _HGG0;
             float _HGG1;
             float _HGLerp;
@@ -53,7 +50,6 @@ Shader "Custom/CloudShaderV4"
             float _MultipleScatteringFactor;
             float _ExtinctionFactor;
             sampler3D _NoiseTexture3D;
-            sampler2D _NoiseTexture2D;
             sampler2D _CameraDepthTexture;
             float _MinStepSize;
             float _MaxStepSize;
@@ -111,10 +107,7 @@ Shader "Custom/CloudShaderV4"
                 float3 uv = float3(p.x / boxSize.x + 0.5, p.y / boxSize.y + 0.5, p.z / boxSize.z + 0.5);
                 
                 fixed4 noise_tex_sample = tex3D(_NoiseTexture3D, uv);
-                fixed4 noise_2d_tex_sample = tex2D(_NoiseTexture2D, uv.xz * _Noise2DScale);
-                
                 float noise = noise_tex_sample.r;
-                float noise2d = (noise_2d_tex_sample.b * 0.75 + noise_2d_tex_sample.g * 0.25);
                 
                 return noise * falloff * _NoiseAmplitude;
             }
@@ -138,7 +131,7 @@ Shader "Custom/CloudShaderV4"
                 float3 samplePos = position;
                 
                 [loop]
-                for (int i = 0; i < 16; i++) // Increased samples for better quality
+                for (int i = 0; i < 16; i++)
                 {
                     samplePos += lightDir * stepSize;
                     float density = sampleNoise(samplePos);
@@ -151,7 +144,6 @@ Shader "Custom/CloudShaderV4"
                 return shadow;
             }
 
-            // Frostbite-style energy conservative volumetric integration
             fixed4 volumetricMarch(float3 ro, float3 rd, float starting_depth, float depth_map_val, float3 light_dir, float3 light_color) 
             {
                 float depth = starting_depth;
